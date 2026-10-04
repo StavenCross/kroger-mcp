@@ -19,8 +19,7 @@ from kroger_api import KrogerAPI
 load_dotenv()
 
 # Store PKCE parameters between steps
-_pkce_params = None
-_auth_state = None
+_auth_attempts = {}
 
 def register_auth_tools(mcp):
     """Register authentication-specific tools with the FastMCP server"""
@@ -37,7 +36,7 @@ def register_auth_tools(mcp):
         Returns:
             Dictionary with authorization URL and instructions
         """
-        global _pkce_params, _auth_state
+        session_key = ctx.session_id if ctx else "direct"
         
         # Generate PKCE parameters
         _pkce_params = generate_pkce_parameters()
@@ -45,6 +44,8 @@ def register_auth_tools(mcp):
         # Generate a state parameter for CSRF protection
         _auth_state = _pkce_params.get('state', _pkce_params.get('code_verifier')[:16])
         
+        _auth_attempts[session_key] = (_pkce_params, _auth_state)
+
         # Get client_id and redirect_uri from environment
         client_id = os.environ.get("KROGER_CLIENT_ID")
         redirect_uri = os.environ.get("KROGER_REDIRECT_URI", "http://localhost:8000/callback")
@@ -72,7 +73,7 @@ def register_auth_tools(mcp):
         )
         
         if ctx:
-            await ctx.info(f"Generated auth URL with PKCE: {auth_url}")
+            await ctx.info("Generated authorization URL")
         
         return {
             "auth_url": auth_url,
@@ -101,8 +102,9 @@ def register_auth_tools(mcp):
         Returns:
             Dictionary indicating authentication status
         """
-        global _pkce_params, _auth_state
+        session_key = ctx.session_id if ctx else "direct"
         
+        _pkce_params, _auth_state = _auth_attempts.get(session_key, (None, None))
         if not _pkce_params or not _auth_state:
             if ctx:
                 await ctx.error("Authentication flow not started")
@@ -131,7 +133,7 @@ def register_auth_tools(mcp):
             # Verify state parameter to prevent CSRF attacks
             if received_state != _auth_state:
                 if ctx:
-                    await ctx.error(f"State mismatch: expected {_auth_state}, got {received_state}")
+                    await ctx.error("OAuth state mismatch")
                 return {
                     "error": True,
                     "message": "State parameter mismatch. This could indicate a CSRF attack. Please try authenticating again."
@@ -164,8 +166,7 @@ def register_auth_tools(mcp):
             )
             
             # Clear PKCE parameters and state after successful exchange
-            _pkce_params = None
-            _auth_state = None
+            _auth_attempts.pop(session_key, None)
             
             if ctx:
                 await ctx.info(f"Authentication successful!")

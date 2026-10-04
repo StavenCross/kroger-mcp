@@ -130,10 +130,7 @@ def register_tools(mcp):
                 })
                 
                 # Don't expose the actual tokens for security
-                result["access_token_preview"] = f"{token_info.get('access_token', '')[:10]}..." if token_info.get('access_token') else "N/A"
                 
-                if "refresh_token" in token_info:
-                    result["refresh_token_preview"] = f"{token_info['refresh_token'][:10]}..."
             
             # Get token file information if available
             if hasattr(client.client, 'token_file') and client.client.token_file:

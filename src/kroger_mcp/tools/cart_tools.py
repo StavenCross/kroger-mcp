@@ -9,6 +9,7 @@ from typing import Dict, Any, List
 
 from fastmcp import Context
 from .shared import get_authenticated_client, resolve_data_file
+from ..shared_state import atomic_json, transfer_order
 
 
 # Cart storage file (resolved to the shared per-user data directory)
@@ -30,11 +31,7 @@ def _load_cart_data() -> Dict[str, Any]:
 
 def _save_cart_data(cart_data: Dict[str, Any]) -> None:
     """Save cart data to file"""
-    try:
-        with open(resolve_data_file(CART_FILE), 'w') as f:
-            json.dump(cart_data, f, indent=2)
-    except Exception as e:
-        print(f"Warning: Could not save cart data: {e}", file=sys.stderr)
+    atomic_json(resolve_data_file(CART_FILE), cart_data)
 
 
 def _load_order_history() -> List[Dict[str, Any]]:
@@ -51,11 +48,7 @@ def _load_order_history() -> List[Dict[str, Any]]:
 
 def _save_order_history(history: List[Dict[str, Any]]) -> None:
     """Save order history to file"""
-    try:
-        with open(resolve_data_file(ORDER_HISTORY_FILE), 'w') as f:
-            json.dump(history, f, indent=2)
-    except Exception as e:
-        print(f"Warning: Could not save order history: {e}", file=sys.stderr)
+    atomic_json(resolve_data_file(ORDER_HISTORY_FILE), history)
 
 
 def _add_item_to_local_cart(product_id: str, quantity: int, modality: str, product_details: Dict[str, Any] = None) -> None:
@@ -437,12 +430,11 @@ def register_tools(mcp):
             # Load and update order history
             order_history = _load_order_history()
             order_history.append(order_record)
-            _save_order_history(order_history)
             
             # Clear current cart
             cart_data["current_cart"] = []
             cart_data["last_updated"] = datetime.now().isoformat()
-            _save_cart_data(cart_data)
+            transfer_order(cart_data, order_history)
             
             return {
                 "success": True,

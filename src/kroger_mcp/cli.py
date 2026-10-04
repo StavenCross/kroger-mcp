@@ -70,7 +70,7 @@ def main():
     if args.transport == "stdio":
         server.run()
     elif args.transport == "streamable-http":
-        server.run(transport="streamable-http", host=args.host, port=args.port)
+        server.run(transport="streamable-http", host=args.host, port=args.port, host_origin_protection=True, allowed_hosts=["127.0.0.1:*", "localhost:*"], allowed_origins=["http://127.0.0.1:*", "http://localhost:*"])
     elif args.transport == "sse":
         server.run(transport="sse", host=args.host, port=args.port)
 

@@ -7,6 +7,7 @@ import sys
 import json
 from typing import Optional, Dict, Any
 from dotenv import load_dotenv
+from ..shared_state import atomic_json
 
 from kroger_api.kroger_api import KrogerAPI
 from kroger_api.utils.env import load_and_validate_env, get_zip_code
@@ -164,11 +165,7 @@ def _load_preferences() -> dict:
 
 def _save_preferences(preferences: dict) -> None:
     """Save preferences to file"""
-    try:
-        with open(resolve_data_file(PREFERENCES_FILE), 'w') as f:
-            json.dump(preferences, f, indent=2)
-    except Exception as e:
-        print(f"Warning: Could not save preferences: {e}", file=sys.stderr)
+    atomic_json(resolve_data_file(PREFERENCES_FILE), preferences)
 
 
 def get_preferred_location_id() -> Optional[str]:

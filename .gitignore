@@ -35,3 +35,6 @@ htmlcov/
 
 
 PUBLISHING.md
+# Private local credential launchers
+codex-launch.sh
+codex-http-launch.sh

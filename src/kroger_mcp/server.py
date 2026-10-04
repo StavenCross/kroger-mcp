@@ -17,6 +17,14 @@ Environment Variables Required:
 """
 
 import sys
+from .shared_state import SharedStateMiddleware, save_token, BoundedRequests
+import kroger_api.client as api_client
+import kroger_api.token_storage as token_storage
+
+# Patch supported persistence hooks before creating any API client.
+api_client.requests = BoundedRequests(api_client.requests)
+api_client.save_token = save_token
+token_storage.save_token = save_token
 from fastmcp import FastMCP
 
 # Import all tool modules
@@ -67,6 +75,8 @@ def create_server() -> FastMCP:
         website/app, use mark_order_placed to move the current cart to order history.
         """
     )
+
+    mcp.add_middleware(SharedStateMiddleware())
 
     # Register all tools from the modules
     location_tools.register_tools(mcp)
